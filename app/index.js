@@ -1,21 +1,26 @@
 import React, { useEffect } from "react";
-import { Canvas, useImage, Image, SkImage } from "@shopify/react-native-skia";
+import { Canvas, useImage, Image, SkImage ,Group} from "@shopify/react-native-skia";
 import { useWindowDimensions } from "react-native";
 import {
   Easing,
+  useDerivedValue,
   useFrameCallback,
   useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
+  interpolate,
+  Extrapolation
 } from "react-native-reanimated";
 import {
   GestureHandlerRootView,
   GestureDetector,
-  Gesture
+  Gesture,
+
 } from "react-native-gesture-handler";
 
-const Gravity = 500;
+const Gravity = 1000;
+const Jump_Force=-400
 const Index = () => {
   const bg = useImage(require("@/assets/sprites/background-day.png"));
   const bird = useImage(require("@/assets/sprites/yellowbird-upflap.png"));
@@ -25,8 +30,14 @@ const Index = () => {
   const { width, height } = useWindowDimensions();
   const x = useSharedValue(width);
   const pipeOffset = 0;
-  const birdY = useSharedValue(0);
-  const birdYVelocity = useSharedValue(100);
+  const birdY = useSharedValue(height/3);
+  const birdYVelocity = useSharedValue(0);
+  const birdTransform =useDerivedValue(()=>{
+    return [{rotate: interpolate( birdYVelocity.value,[-400,400],[-0.4,0.4],Extrapolation.CLAMP)}];
+  });
+  const birdOrigin=useDerivedValue(()=>{
+    return  {x:width/4+32, y:birdY.value+24}
+  })
   useFrameCallback(({ timeSincePreviousFrame: dt }) => {
     if (!dt) {
       return;
@@ -45,7 +56,7 @@ const Index = () => {
     );
   }, []);
   const gesture =Gesture.Tap().onStart(()=>{
-    birdYVelocity.value = -300
+    birdYVelocity.value = Jump_Force
   })
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -81,7 +92,9 @@ const Index = () => {
           fit={"cover"}
         />
         {/* bird */}
+        <Group transform={birdTransform} origin={birdOrigin}>
         <Image image={bird} y={birdY} x={width / 4} width={64} height={48} />
+        </Group>
       </Canvas>
       </GestureDetector>
     </GestureHandlerRootView>
