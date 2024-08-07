@@ -21,6 +21,7 @@ import {
   Extrapolation,
   useAnimatedReaction,
   runOnJS,
+  cancelAnimation,
 } from "react-native-reanimated";
 import {
   GestureHandlerRootView,
@@ -41,28 +42,51 @@ const Index = () => {
   const pipeOffset = 0;
   const birdY = useSharedValue(height / 3);
   const birdYVelocity = useSharedValue(0);
+  const gameOver = useSharedValue(false);
+  //Scoring
   const birdPos = {
     x: width / 4,
   };
   const [score, setScore] = useState(0);
   useFrameCallback(({ timeSincePreviousFrame: dt }) => {
-    if (!dt) {
+    if (!dt || gameOver.value) {
       return;
     }
-
     birdY.value = birdY.value + (birdYVelocity.value * dt) / 1000;
     birdYVelocity.value = birdYVelocity.value + (Gravity * dt) / 1000;
   });
+  //Collision Detection
+  useAnimatedReaction(
+    () => birdY.value,
+    (currentValue, previousValue) => {
+      if (currentValue > height - 110) {
+        console.log("Game Over");
+        gameOver.value = true;
+        cancelAnimation(x);
+      }
+    }
+  );
+  //StopAnimation On GameOver
+  useAnimatedReaction(
+    () => gameOver.value,
+    (currentValue, previousValue) => {
+      if (currentValue && !previousValue) {
+        cancelAnimation(x);
+      }
+    }
+  );
   useEffect(() => {
-    x.value = withRepeat(
-      withSequence(
-        withTiming(-100, { duration: 3000, easing: Easing.linear }),
-        withTiming(width, { duration: 0 })
-      ),
-      -1
-    );
+  moveTheMap();
   }, []);
-
+const moveTheMap =()=>{
+  x.value = withRepeat(
+    withSequence(
+      withTiming(-100, { duration: 3000, easing: Easing.linear }),
+      withTiming(width, { duration: 0 })
+    ),
+    -1
+  );
+}
   useAnimatedReaction(
     () => x.value,
 
@@ -78,9 +102,23 @@ const Index = () => {
       }
     }
   );
-
+  //Restart Game
+  const restartGame=()=>{
+    'worklet';
+    birdY.value = height / 3;
+    birdYVelocity.value = 0;
+    gameOver.value = false;
+    runOnJS(setScore)(0);
+    runOnJS(moveTheMap)()
+    x.value = width;
+  }
+//Gesture
   const gesture = Gesture.Tap().onStart(() => {
-    birdYVelocity.value = Jump_Force;
+    if (gameOver.value) {
+      restartGame();
+    } else {
+      birdYVelocity.value = Jump_Force;
+    }
   });
   //DerivedValues
   const birdTransform = useDerivedValue(() => {
