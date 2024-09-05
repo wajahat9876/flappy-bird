@@ -31,20 +31,23 @@ import {
 } from "react-native-gesture-handler";
 
 const Gravity = 1000;
-const Jump_Force = -400;
+const Jump_Force = -350;
 const pipeWidth = 104;
-const pipeHeight = 640;
+const pipeHeight = 550;
 const Index = () => {
   const bg = useImage(require("@/assets/sprites/background-day.png"));
-  const bird = useImage(require("@/assets/sprites/yellowbird-upflap.png"));
+  const bird = useImage(require("@/assets/sprites/birdd.png"));
+
   const pipeBottom = useImage(require("@/assets/sprites/pipe-green.png"));
   const pipeTop = useImage(require("@/assets/sprites/pipe-green-top.png"));
   const base = useImage(require("@/assets/sprites/base.png"));
   const { width, height } = useWindowDimensions();
   const x = useSharedValue(width);
-  const pipeOffset = 0;
+  const pipeOffset = useSharedValue(0);
   const birdY = useSharedValue(height / 3);
   const birdYVelocity = useSharedValue(0);
+  const topPipeY = useDerivedValue(() => pipeOffset.value - 320);
+  const bottomPipeY = useDerivedValue(() => height - 320 + pipeOffset.value);
   const gameOver = useSharedValue(false);
   //Scoring
   const birdPos = {
@@ -55,21 +58,21 @@ const Index = () => {
   const [score, setScore] = useState(0);
   const obstacles = useDerivedValue(() => {
     const allObstacles = [];
-    //add bottom pipes
+    //add bottom pipescr
     allObstacles.push({
       x: x.value,
-      y: height - 320 + pipeOffset,
+      y: bottomPipeY.value,
       h: pipeHeight,
       w: pipeWidth,
     });
     //add top pipes
     allObstacles.push({
       x: x.value,
-      y:pipeOffset-320,
+      y: topPipeY.value,
       h: pipeHeight,
       w: pipeWidth,
     });
-    return allObstacles
+    return allObstacles;
   });
   useFrameCallback(({ timeSincePreviousFrame: dt }) => {
     if (!dt || gameOver.value) {
@@ -79,14 +82,14 @@ const Index = () => {
     birdYVelocity.value = birdYVelocity.value + (Gravity * dt) / 1000;
   });
 
-  const isPointCollidingWithRect=(point,rect)=>{
-    'worklet';
-    return(
-      point.x>= rect.x &&
-   point.x <= rect.x + rect.w &&
-      point.y >=rect.y &&
+  const isPointCollidingWithRect = (point, rect) => {
+    "worklet";
+    return (
+      point.x >= rect.x &&
+      point.x <= rect.x + rect.w &&
+      point.y >= rect.y &&
       point.y <= rect.y + rect.h
-    ); 
+    );
   };
   //Collision Detection
   useAnimatedReaction(
@@ -94,15 +97,18 @@ const Index = () => {
     (currentValue, previousValue) => {
       //ground collison detection
       if (currentValue > height - 110 || currentValue < 0) {
+        
         gameOver.value = true;
       }
-     const isColliding= obstacles.value.some((rect)=> isPointCollidingWithRect({x:birdCenterX.value,y:birdCenterY.value},
-      rect
-     )
-    );
-    if(isColliding){
-      gameOver.value = true
-    }
+      const isColliding = obstacles.value.some((rect) =>
+        isPointCollidingWithRect(
+          { x: birdCenterX.value, y: birdCenterY.value },
+          rect
+        )
+      );
+      if (isColliding) {
+        gameOver.value = true;
+      }
       // //Bottom Pipe
       // if (
       //   birdCenterX.value >= x.value &&
@@ -134,10 +140,9 @@ const Index = () => {
       }
     }
   );
-  useEffect(() => {
-    moveTheMap();
-  }, []);
+
   const moveTheMap = () => {
+    console.log('true')
     x.value = withRepeat(
       withSequence(
         withTiming(-100, { duration: 3000, easing: Easing.linear }),
@@ -146,10 +151,19 @@ const Index = () => {
       -1
     );
   };
+  useEffect(() => {
+    // Start moving the pipes when the game is first loaded
+    moveTheMap();
+  }, []);
+  //Scoring System
   useAnimatedReaction(
     () => x.value,
     (currentValue, previousValue) => {
       const middle = birdPos.x;
+      if (previousValue && currentValue < -99 && previousValue > -100) {
+        console.log('Change Offset')
+        pipeOffset.value =Math.random()*400-200
+      }
       if (
         currentValue !== previousValue &&
         previousValue &&
@@ -208,17 +222,18 @@ const Index = () => {
         <Canvas style={{ width, height }}>
           {/* bg */}
           <Image image={bg} width={width} height={height} fit={"cover"} />
+         
           {/* pipe */}
           <Image
             image={pipeTop}
-            y={pipeOffset - 320}
+            y={topPipeY}
             x={x}
             height={pipeHeight}
             width={pipeWidth}
           />
           <Image
             image={pipeBottom}
-            y={height - 320 + pipeOffset}
+            y={bottomPipeY}
             x={x}
             height={640}
             width={104}
@@ -250,6 +265,7 @@ const Index = () => {
             color="black"
             font={font}
           />
+         
         </Canvas>
       </GestureDetector>
     </GestureHandlerRootView>
