@@ -161,7 +161,6 @@ const Index = () => {
     (currentValue, previousValue) => {
       const middle = birdPos.x;
       if (previousValue && currentValue < -99 && previousValue > -100) {
-        console.log('Change Offset')
         pipeOffset.value =Math.random()*400-200
       }
       if (
